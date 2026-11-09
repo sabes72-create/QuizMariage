@@ -1,0 +1,160 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Classement - Quiz des Mari&eacute;s</title>
+
+
+  <style>
+* { box-sizing: border-box; }
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 15px; max-width: 600px; margin: 0 auto; background: #f0f2f5; color: #1c1e21; }
+.card { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); }
+h2 { color: #8a2be2; text-align: center; margin-top: 0; font-size: 24px; }
+.table-container { margin-top: 20px; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; text-align: left; }
+th, td { padding: 12px 15px; border-bottom: 1px solid #e4e6eb; font-size: 15px; }
+th { background: #f7f8fa; color: #65676b; font-weight: 600; }
+tr:hover { background: #f9f9f9; }
+.badge-1 { background: #ffd700; color: #333; padding: 4px 8px; border-radius: 12px; font-weight: bold; }
+.badge-2 { background: #c0c0c0; color: #333; padding: 4px 8px; border-radius: 12px; font-weight: bold; }
+.badge-3 { background: #cd7f32; color: white; padding: 4px 8px; border-radius: 12px; font-weight: bold; }
+.btn { display: inline-block; padding: 12px 20px; border: none; border-radius: 10px; font-size: 15px; font-weight: bold; cursor: pointer; text-decoration: none; text-align: center; transition: background 0.2s; }
+.btn-danger { background: #d9534f; color: white; margin-top: 20px; width: 100%; }
+.btn-danger:hover { background: #c9302c; }
+.btn-back { background: #e4e6eb; color: #4b4f56; margin-bottom: 15px; }
+.btn-back:hover { background: #d8dadf; }
+.admin-panel { margin-top: 25px; padding: 15px; background: #f8f9fa; border: 2px dashed #8a2be2; border-radius: 12px; }
+.admin-title { font-weight: bold; color: #8a2be2; margin-bottom: 10px; text-align: center; }
+.locked-screen { text-align: center; padding: 40px 20px; }
+.locked-screen h2 { color: #d9534f; }
+  </style>
+</head>
+<body>
+
+<div class="card" id="app">
+<div class="locked-screen">
+<h2>Acc&egrave;s restreint &#128274;</h2>
+
+<p>V&eacute;rification du code administrateur...</p>
+
+</div>
+
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getDatabase, ref, onValue, remove, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+const firebaseConfig = {
+apiKey: "AIzaSyDASGPAd46ViG47ClRor_unIYDvxLDINDo",
+authDomain: "quiz-mariage-6d977.firebaseapp.com",
+databaseURL: "https://quiz-mariage-6d977-default-rtdb.firebaseio.com",
+projectId: "quiz-mariage-6d977",
+storageBucket: "quiz-mariage-6d977.appspot.com",
+messagingSenderId: "1094285499360",
+appId: "1:1094285499360:web:4cc3306a89b50df547e985"
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const appDiv = document.getElementById("app");
+window.onload = function() {
+const code = prompt("Entrez le code administrateur pour voir le classement :");
+if (code !== "2204") {
+alert("Code incorrect ! Redirection...");
+window.location.href = "index.html";
+return;
+}
+initClassement();
+};
+function initClassement() {
+onValue(ref(db, 'participants'), (snapshot) => {
+const participants = snapshot.val();
+renderDashboard(participants);
+});
+}
+function renderDashboard(participants) {
+let rows = '';
+let dataList = [];
+if (participants) {
+Object.keys(participants).forEach(id => {
+dataList.push({ id: id, ...participants[id] });
+});
+dataList.sort((a, b) => {
+if (b.score !== a.score) return b.score - a.score;
+return (a.timestamp || 0) - (b.timestamp || 0);
+});
+dataList.forEach((p, index) => {
+let badge = `#${index + 1}`;
+if (index === 0) badge = `<span class="badge-1">1er &#127942;</span>`;
+if (index === 1) badge = `<span class="badge-2">2&egrave;me &#129352;</span>`;
+if (index === 2) badge = `<span class="badge-3">3&egrave;me &#129353;</span>`;
+rows += `
+<tr>
+<td><b>${badge}</b></td>
+<td>${escapeHtml(p.nom)}</td>
+<td><b>${p.score} / 15</b></td>
+<td><button class="btn" style="padding:6px 10px; background:#ff4d4d; color:white; font-size:12px;" onclick="supprimerCandidat('${p.id}')">Supprimer</button></td>
+</tr>`;
+});
+} else {
+rows = `<tr><td colspan="4" style="text-align:center; color:#65676b;">Aucun participant pour le moment...</td></tr>`;
+}
+appDiv.innerHTML = `
+<a href="index.html" class="btn btn-back">&#11013; Retour au Quiz</a>
+<h2>Classement en direct &#127942;</h2>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th>Rang</th>
+<th>Pr&eacute;nom</th>
+<th>Score</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+${rows}
+</tbody>
+</table>
+</div>
+<div class="admin-panel">
+<div class="admin-title">&#9881;&#65039; Panneau Administrateur (Mari&eacute;s)</div>
+<div style="margin-bottom: 15px; text-align: center;">
+<label style="font-weight: bold; cursor: pointer; color: #333;">
+<input type="checkbox" id="toggleReponses" style="transform: scale(1.3); margin-right: 8px;">
+D\u00e9bloquer la correction pour les invit\u00e9s &#128161;
+</label>
+</div>
+<button class="btn btn-danger" onclick="reinitialiserClassement()">R\u00e9initialiser tout le classement</button>
+</div>
+`;
+const toggleBtn = document.getElementById("toggleReponses");
+onValue(ref(db, 'settings/reponsesDebloquees'), (snapshot) => {
+if(toggleBtn) toggleBtn.checked = snapshot.val() === true;
+}, { onlyOnce: true });
+toggleBtn.addEventListener("change", (e) => {
+set(ref(db, 'settings/reponsesDebloquees'), e.target.checked);
+});
+}
+window.supprimerCandidat = function(id) {
+if (confirm("Voulez-vous vraiment supprimer ce participant ? (Cela lui permettra de rejouer s'il le souhaite)")) {
+remove(ref(db, 'participants/' + id));
+}
+};
+window.reinitialiserClassement = function() {
+if (confirm("ATTENTION : Voulez-vous vraiment effacer tous les scores et r\u00e9initialiser le jeu ?")) {
+remove(ref(db, 'participants')).then(() => {
+set(ref(db, 'settings/reponsesDebloquees'), false);
+alert("Classement r\u00e9initialis\u00e9 avec succ\u00e8s !");
+});
+}
+};
+function escapeHtml(text) {
+if (!text) return '';
+return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+</script>
+</body>
+</html>
