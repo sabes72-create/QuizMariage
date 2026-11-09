@@ -1,0 +1,264 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quiz des Mari&eacute;s</title>
+
+
+  <style>
+* { box-sizing: border-box; }
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 15px; max-width: 500px; margin: 0 auto; background: #f0f2f5; color: #1c1e21; }
+.card { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); min-height: 420px; display: flex; flex-direction: column; justify-content: space-between; }
+h2 { color: #8a2be2; text-align: center; margin: 0 0 5px 0; font-size: 24px; }
+p.subtitle { text-align: center; color: #65676b; font-size: 14px; margin-bottom: 20px; }
+.progress-container { background: #e4e6eb; border-radius: 10px; height: 8px; width: 100%; margin-bottom: 15px; overflow: hidden; }
+.progress-bar { background: #8a2be2; height: 100%; width: 0%; transition: width 0.3s ease; }
+.step-text { font-size: 13px; font-weight: bold; color: #8a2be2; text-align: right; margin-bottom: 15px; }
+input[type="text"] { width: 100%; padding: 14px; margin: 15px 0; border: 2px solid #ddd; border-radius: 10px; font-size: 16px; outline: none; }
+input[type="text"]:focus { border-color: #8a2be2; }
+.question-box { display: none; }
+.question-box.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+.question-title { font-size: 18px; font-weight: 600; margin-bottom: 15px; color: #1c1e21; line-height: 1.4; }
+.option-label { display: flex; align-items: center; padding: 14px 16px; margin: 10px 0; border-radius: 12px; background: #f7f8fa; border: 2px solid #e4e6eb; cursor: pointer; transition: all 0.2s ease; font-size: 16px; font-weight: 500; }
+.option-label:hover { background: #f0e6ff; border-color: #d1b3ff; }
+.option-label input[type="radio"] { margin-right: 12px; transform: scale(1.3); accent-color: #8a2be2; }
+.option-label.selected { background: #f0e6ff; border-color: #8a2be2; color: #8a2be2; font-weight: 600; }
+.nav-buttons { display: flex; gap: 10px; margin-top: 20px; }
+.btn { flex: 1; padding: 14px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.2s; text-align: center; text-decoration: none; display: inline-block; }
+.btn-next { background: #8a2be2; color: white; }
+.btn-next:hover { background: #7322bf; }
+.btn-prev { background: #e4e6eb; color: #4b4f56; }
+.btn-prev:hover { background: #d8dadf; }
+.btn-submit { background: #2e7d32; color: white; }
+.btn-submit:hover { background: #1b5e20; }
+.btn-secondary { background: #e4e6eb; color: #4b4f56; margin-top: 10px; }
+.btn-secondary:hover { background: #d8dadf; }
+.blocked { text-align: center; padding: 30px 10px; }
+.blocked h2 { color: #d9534f; }
+  </style>
+</head>
+<body>
+
+<div class="card" id="app">Chargement...</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+const firebaseConfig = {
+apiKey: "AIzaSyDASGPAd46ViG47ClRor_unIYDvxLDINDo",
+authDomain: "quiz-mariage-6d977.firebaseapp.com",
+databaseURL: "https://quiz-mariage-6d977-default-rtdb.firebaseio.com",
+projectId: "quiz-mariage-6d977",
+storageBucket: "quiz-mariage-6d977.appspot.com",
+messagingSenderId: "1094285499360",
+appId: "1:1094285499360:web:4cc3306a89b50df547e985"
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const appDiv = document.getElementById("app");
+let currentStep = 0;
+const totalQuestions = 15;
+const questionsData = [
+{ id: 1, title: "1. O&ugrave; les mari&eacute;s se sont-ils rencontr&eacute;s ?", options: ["Coll&egrave;ge", "Soir&eacute;e d'amis", "Sport"], ans: "Coll&egrave;ge" },
+{ id: 2, title: "2. Qui a fait le premier pas ?", options: ["Ana&iuml;s", "Les deux", "Seb"], ans: "Seb" },
+{ id: 3, title: "3. Quel est leur plus grand plaisir quand ils ont du temps libre ?", options: ["Ap&eacute;ro", "Sport", "Les calculs mentaux"], ans: "Ap&eacute;ro" },
+{ id: 4, title: "4. Sur quelle chanson le premier baiser ?", options: ["Sexual Healing de Marvin Gaye", "Les sardines de Patrick S&eacute;bastien", "Human Nature de Michael Jackson"], ans: "Human Nature de Michael Jackson" },
+{ id: 5, title: "5. Leur premi&egrave;re destination de vacances &agrave; deux ?", options: ["St Lary Soulan", "Chamonix", "St Jean de Monts"], ans: "St Jean de Monts" },
+{ id: 6, title: "6. Le surnom utilis&eacute; ?", options: ["B&eacute;b&eacute;", "Mon amour", "Mon c&oelig;ur"], ans: "B&eacute;b&eacute;" },
+{ id: 7, title: "7. Le cadeau le plus improbable que l'un a offert &agrave; l'autre ?", options: ["Une batterie de cuisine en inox", "44 cadeaux pour les 44 ans", "Une caricature dessin&eacute;e par un artiste de rue"], ans: "44 cadeaux pour les 44 ans" },
+{ id: 8, title: "8. L'endroit de la demande ?", options: ["St Jean de Monts", "Rouen", "Paris"], ans: "St Jean de Monts" },
+{ id: 9, title: "9. Leurs &acirc;ges au moment de la rencontre ?", options: ["24 ans et 45 ans", "22 ans et 43 ans", "25 ans et 46 ans"], ans: "22 ans et 43 ans" },
+{ id: 10, title: "10. Depuis combien de temps ils sont ensemble ?", options: ["11 ans", "12 ans", "13 ans"], ans: "11 ans" },
+{ id: 11, title: "11. Leur premier concert ensemble ?", options: ["Les Insus", "Jean Louis Aubert", "M"], ans: "Jean Louis Aubert" },
+{ id: 12, title: "12. Quel est le pays dans lequel les mari&eacute;s r&ecirc;veraient de partir ensemble ?", options: ["Laponie", "Norv&egrave;ge", "Canada"], ans: "Norv&egrave;ge" },
+{ id: 13, title: "13. Quelle pourrait &ecirc;tre le voyage de noce id&eacute;al des mari&eacute;s ?", options: ["La Gr&egrave;ce", "La R&eacute;union", "Le Tour du Mont Blanc en bivouac"], ans: "Le Tour du Mont Blanc en bivouac" },
+{ id: 14, title: "14. Quelle passion insoup&ccedil;onn&eacute;e les mari&eacute;s partagent-ils ?", options: ["Le PSG", "Les tulipes", "La p&ecirc;che &agrave; la truite"], ans: "Le PSG" },
+{ id: 15, title: "15. Quelle boisson pr&eacute;f&eacute;r&eacute;e des mari&eacute;s ?", options: ["L'eau b&eacute;nite", "Le vin", "Le jus de cactus"], ans: "Le vin" }
+];
+let deviceId = localStorage.getItem("quiz_device_id");
+if (!deviceId) {
+deviceId = 'dev_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
+localStorage.setItem("quiz_device_id", deviceId);
+}
+get(ref(db, 'participants/' + deviceId)).then((snapshot) => {
+if (snapshot.exists()) {
+appDiv.innerHTML = `
+<div class="blocked">
+<h2>D&eacute;j&agrave; particip&eacute; ! &#127881;</h2>
+<p>Tu as d&eacute;j&agrave; valid&eacute; tes r&eacute;ponses pour ce quiz sur cet appareil.</p>
+<button class="btn btn-next" style="margin-top:20px;" onclick="accederClassement()">Voir le classement &#127942;</button>
+</div>`;
+} else {
+initApp();
+}
+}).catch(() => {
+initApp();
+});
+// Fonction globale pour sécuriser l'accès au classement
+window.accederClassement = function() {
+const code = prompt("Entrez le code administrateur :");
+if (code === "2204") {
+window.location.href = "classement.html";
+} else if (code !== null) {
+alert("Code incorrect !");
+}
+};
+function initApp() {
+renderHTML();
+bindEvents();
+updateView();
+}
+function renderHTML() {
+let questionsHTML = '';
+questionsData.forEach((q) => {
+let optionsHTML = '';
+q.options.forEach(opt => {
+optionsHTML += `
+<label class="option-label">
+<input type="radio" name="q${q.id}" value="${opt}"> ${opt}
+</label>`;
+});
+questionsHTML += `
+<div class="question-box" id="step-${q.id}">
+<div class="question-title">${q.title}</div>
+<div class="options-group">${optionsHTML}</div>
+</div>`;
+});
+appDiv.innerHTML = `
+<div>
+<h2>Quiz des Mari&eacute;s &#128141;</h2>
+<p class="subtitle" id="subtitle">Entre ton pr&eacute;nom pour commencer !</p>
+<div class="progress-container" id="progress-container" style="display:none;">
+<div class="progress-bar" id="progress-bar"></div>
+</div>
+<div class="step-text" id="step-text" style="display:none;">Question 1 sur 15</div>
+<div class="question-box active" id="step-0">
+<label for="pseudo"><b>Ton Pr&eacute;nom et Nom :</b></label>
+<input type="text" id="pseudo" placeholder="Ex: Julie R." required>
+</div>
+${questionsHTML}
+</div>
+<div>
+<div class="nav-buttons" id="nav-buttons-container">
+<button class="btn btn-prev" id="btnPrev" style="display:none;">Pr&eacute;c&eacute;dent</button>
+<button class="btn btn-next" id="btnNext">Commencer</button>
+<button class="btn btn-submit" id="btnSubmit" style="display:none;">Valider mon Quiz</button>
+</div>
+<button class="btn btn-secondary" id="btnDirectClassement" style="width:100%; display:block; text-align:center; cursor:pointer;" onclick="accederClassement()">&#127942; Acc&egrave;s Classement (Mari&eacute;s)</button>
+</div>
+`;
+}
+function bindEvents() {
+document.getElementById("btnNext").addEventListener("click", nextStep);
+document.getElementById("btnPrev").addEventListener("click", prevStep);
+document.getElementById("btnSubmit").addEventListener("click", submitQuiz);
+document.querySelectorAll('.option-label input').forEach(input => {
+input.addEventListener('change', (e) => {
+const parentGroup = e.target.closest('.options-group');
+parentGroup.querySelectorAll('.option-label').forEach(lbl => lbl.classList.remove('selected'));
+e.target.closest('.option-label').classList.add('selected');
+});
+});
+}
+function updateView() {
+document.querySelectorAll('.question-box').forEach(el => el.classList.remove('active'));
+document.getElementById(`step-${currentStep}`).classList.add('active');
+const progressContainer = document.getElementById("progress-container");
+const progressBar = document.getElementById("progress-bar");
+const stepText = document.getElementById("step-text");
+const subtitle = document.getElementById("subtitle");
+const btnPrev = document.getElementById("btnPrev");
+const btnNext = document.getElementById("btnNext");
+const btnSubmit = document.getElementById("btnSubmit");
+const btnDirectClassement = document.getElementById("btnDirectClassement");
+if (currentStep === 0) {
+progressContainer.style.display = "none";
+stepText.style.display = "none";
+subtitle.style.display = "block";
+btnPrev.style.display = "none";
+btnSubmit.style.display = "none";
+btnNext.style.display = "block";
+btnNext.textContent = "Commencer le Quiz";
+btnDirectClassement.style.display = "block";
+} else {
+progressContainer.style.display = "block";
+stepText.style.display = "block";
+subtitle.style.display = "none";
+btnDirectClassement.style.display = "none";
+const pct = (currentStep / totalQuestions) * 100;
+progressBar.style.width = `${pct}%`;
+stepText.textContent = `Question ${currentStep} sur ${totalQuestions}`;
+btnPrev.style.display = "block";
+if (currentStep === totalQuestions) {
+btnNext.style.display = "none";
+btnSubmit.style.display = "block";
+} else {
+btnNext.style.display = "block";
+btnNext.textContent = "Suivante";
+btnSubmit.style.display = "none";
+}
+}
+}
+function nextStep() {
+if (currentStep === 0) {
+const pseudo = document.getElementById("pseudo").value.trim();
+if (!pseudo) {
+alert("Merci d'indiquer ton pr\u00e9nom !");
+return;
+}
+} else {
+const checked = document.querySelector(`input[name="q${currentStep}"]:checked`);
+if (!checked) {
+alert("Merci de s\u00e9lectionner une r\u00e9ponse !");
+return;
+}
+}
+if (currentStep < totalQuestions) {
+currentStep++;
+updateView();
+}
+}
+function prevStep() {
+if (currentStep > 0) {
+currentStep--;
+updateView();
+}
+}
+function submitQuiz() {
+const checked = document.querySelector(`input[name="q${totalQuestions}"]:checked`);
+if (!checked) {
+alert("Merci de s\u00e9lectionner une r\u00e9ponse !");
+return;
+}
+const pseudo = document.getElementById("pseudo").value.trim();
+let score = 0;
+questionsData.forEach(q => {
+const val = document.querySelector(`input[name="q${q.id}"]:checked`)?.value;
+if (val === q.ans) {
+score++;
+}
+});
+set(ref(db, 'participants/' + deviceId), {
+nom: pseudo,
+score: score,
+timestamp: Date.now()
+}).then(() => {
+appDiv.innerHTML = `
+<div style="text-align:center; padding: 20px 10px;">
+<h2 style="color:#4CAF50; font-size: 26px;">Merci ${pseudo} ! &#10084;&#65039;</h2>
+<p style="font-size: 18px; margin: 15px 0;">Ton score : <b>${score} / 15</b></p>
+<p style="color:#666; font-size: 14px;">Tes r&eacute;ponses sont enregistr&eacute;es.</p>
+<button class="btn btn-next" style="margin-top:20px;" onclick="accederClassement()">Voir le classement &#127942;</button>
+</div>
+`;
+}).catch(err => {
+alert("Erreur d'envoi : " + err.message);
+});
+}
+</script>
+</body>
+</html>
