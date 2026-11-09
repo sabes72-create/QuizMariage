@@ -1,0 +1,129 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Classement - Quiz des Mari&eacute;s</title>
+
+
+  <style>
+* { box-sizing: border-box; }
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 15px; max-width: 500px; margin: 0 auto; background: #f0f2f5; color: #1c1e21; }
+.card { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); }
+h2 { color: #8a2be2; text-align: center; margin-bottom: 20px; font-size: 24px; }
+.podium-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; margin: 10px 0; background: #f7f8fa; border-radius: 12px; font-size: 16px; font-weight: 500; border: 2px solid #e4e6eb; }
+.podium-item.top-1 { background: #fff8e1; border-color: #ffe082; font-weight: bold; }
+.podium-item.top-2 { background: #f5f5f5; border-color: #e0e0e0; }
+.podium-item.top-3 { background: #fbe9e7; border-color: #ffccbc; }
+.btn-delete { background: #ff5252; color: white; border: none; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: bold; }
+.btn-delete:hover { background: #ff1744; }
+.admin-panel { margin-top: 30px; text-align: center; border-top: 1px solid #e4e6eb; padding-top: 15px; }
+.btn-admin { background: none; border: none; color: #8a2be2; font-size: 13px; cursor: pointer; font-weight: 600; }
+.btn-reset { background: #d9534f; color: white; border: none; padding: 10px 15px; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 14px; width: 100%; margin-top: 10px; display: none; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+<h2>Classement en direct &#127942;</h2>
+
+<div id="classement">Chargement des scores...</div>
+
+<div class="admin-panel">
+<button class="btn-admin" id="adminToggleBtn">&#128272; Mode Admin</button>
+<button class="btn-reset" id="resetBtn">&#128465;&#65039; Vider tout le classement</button>
+</div>
+
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getDatabase, ref, onValue, remove, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+const firebaseConfig = {
+apiKey: "AIzaSyDASGPAd46ViG47ClRor_unIYDvxLDINDo",
+authDomain: "quiz-mariage-6d977.firebaseapp.com",
+databaseURL: "https://quiz-mariage-6d977-default-rtdb.firebaseio.com",
+projectId: "quiz-mariage-6d977",
+storageBucket: "quiz-mariage-6d977.appspot.com",
+messagingSenderId: "1094285499360",
+appId: "1:1094285499360:web:4cc3306a89b50df547e985"
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const classementDiv = document.getElementById("classement");
+const resetBtn = document.getElementById("resetBtn");
+const adminToggleBtn = document.getElementById("adminToggleBtn");
+let isAdmin = false;
+const ADMIN_PASSWORD = "2204";
+adminToggleBtn.addEventListener("click", () => {
+if (!isAdmin) {
+const pwd = prompt("Mot de passe administrateur :");
+if (pwd === ADMIN_PASSWORD) {
+isAdmin = true;
+adminToggleBtn.innerHTML = "&#128275; Quitter Mode Admin";
+adminToggleBtn.style.color = "#d9534f";
+resetBtn.style.display = "block";
+renderClassement();
+} else if (pwd !== null) {
+alert("Mot de passe incorrect.");
+}
+} else {
+isAdmin = false;
+adminToggleBtn.innerHTML = "&#128272; Mode Admin";
+adminToggleBtn.style.color = "#8a2be2";
+resetBtn.style.display = "none";
+renderClassement();
+}
+});
+let rawData = null;
+const participantsRef = ref(db, 'participants/');
+onValue(participantsRef, (snapshot) => {
+rawData = snapshot.val();
+renderClassement();
+});
+function renderClassement() {
+if (!rawData) {
+classementDiv.innerHTML = "<p style='text-align:center; color:#666;'>Aucun participant pour le moment.</p>";
+return;
+}
+let participants = [];
+for (let id in rawData) {
+participants.push({ id: id, ...rawData[id] });
+}
+participants.sort((a, b) => b.score - a.score);
+let html = "";
+participants.forEach((p, index) => {
+let rankClass = "";
+if (index === 0) rankClass = "top-1";
+else if (index === 1) rankClass = "top-2";
+else if (index === 2) rankClass = "top-3";
+let medal = index === 0 ? "&#129351; " : index === 1 ? "&#129352; " : index === 2 ? "&#129353; " : `${index + 1}. `;
+let deleteBtnHtml = isAdmin ? `<button class="btn-delete" onclick="deleteParticipant('${p.id}')">&#10060;</button>` : "";
+html += `
+<div class="podium-item ${rankClass}">
+<span>${medal}${p.nom}</span>
+<div style="display:flex; align-items:center; gap:10px;">
+<span><b>${p.score} / 15</b></span>
+${deleteBtnHtml}
+</div>
+</div>`;
+});
+classementDiv.innerHTML = html;
+}
+window.deleteParticipant = function(id) {
+if (confirm("Supprimer ce score ?")) {
+remove(ref(db, 'participants/' + id));
+}
+};
+resetBtn.addEventListener("click", () => {
+if (confirm("Attention, veux-tu vraiment effacer TOUS les scores du classement ?")) {
+set(ref(db, 'participants/'), null).then(() => {
+alert("Classement r\u00e9initialis\u00e9 \u00e0 z\u00e9ro.");
+});
+}
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,94 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+
+  <meta charset="UTF-8">
+  <title>Classement Quiz Mariage</title>
+
+
+  <style>
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f172a; color: white; padding: 30px; text-align: center; }
+h1 { font-size: 2.8em; margin-bottom: 10px; color: #f472b6; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+p.sub { font-size: 1.2em; color: #94a3b8; margin-bottom: 30px; }
+table { width: 85%; max-width: 900px; margin: 0 auto; border-collapse: collapse; background: #1e293b; border-radius: 12px; overflow: hidden; font-size: 1.4em; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+th, td { padding: 16px 24px; text-align: left; }
+th { background: #334155; text-transform: uppercase; color: #cbd5e1; font-size: 0.85em; letter-spacing: 1px; }
+tr:nth-child(even) { background: #182234; }
+tr:first-child { background: rgba(234, 179, 8, 0.15); font-weight: bold; }
+tr:first-child td { color: #facc15; font-size: 1.1em; } /* &#129351; Or */
+tr:nth-child(2) td { color: #e2e8f0; } /* &#129352; Argent */
+tr:nth-child(3) td { color: #f97316; } /* &#129353; Bronze */
+.badge { background: #8a2be2; padding: 4px 12px; border-radius: 20px; font-size: 0.9em; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+<h1>&#128141; Quiz des Mari&eacute;s &mdash; Classement &#127942;</h1>
+
+<p class="sub">Mise &agrave; jour automatique en direct</p>
+
+<table>
+
+  <thead>
+  <tr>
+
+    <th style="width: 10%;">Rang</th>
+
+    <th style="width: 60%;">Nom du participant</th>
+
+    <th style="width: 30%;">Score / 15</th>
+
+  </tr>
+
+  </thead>
+  <tbody id="tableau">
+
+    <tr>
+
+      <td colspan="3" style="text-align: center; color: rgb(148, 163, 184);">En attente des premiers participants...</td>
+
+    </tr>
+
+  </tbody>
+</table>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+// REMPLACE PAR TA CONFIGURATION FIREBASE EXACTE
+const firebaseConfig = {
+apiKey: "VOTRE_API_KEY",
+authDomain: "VOTRE_PROJECT_ID.firebaseapp.com",
+databaseURL: "https://VOTRE_PROJECT_ID-default-rtdb.firebaseio.com",
+projectId: "VOTRE_PROJECT_ID",
+storageBucket: "VOTRE_PROJECT_ID.appspot.com",
+messagingSenderId: "...",
+appId: "..."
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const tableau = document.getElementById("tableau");
+// Écoute automatique des nouveaux scores
+onValue(ref(db, 'participants/'), (snapshot) => {
+const data = snapshot.val();
+if (!data) return;
+// Trier les résultats du plus grand score au plus petit
+const liste = Object.values(data).sort((a, b) => b.score - a.score);
+tableau.innerHTML = "";
+liste.forEach((j, index) => {
+let medaille = `${index + 1}`;
+if (index === 0) medaille = "&#129351; 1er";
+else if (index === 1) medaille = "&#129352; 2e";
+else if (index === 2) medaille = "&#129353; 3e";
+tableau.innerHTML += `
+<tr>
+<td>${medaille}</td>
+<td>${j.nom}</td>
+<td><span class="badge">${j.score} pts</span></td>
+</tr>
+`;
+});
+});
+</script>
+</body>
+</html>
